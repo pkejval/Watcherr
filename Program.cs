@@ -20,6 +20,13 @@ internal class Program
         else { INTERVAL = 600; }
 
         Http = new HttpClient();
+
+        var timer = new PeriodicTimer(TimeSpan.FromSeconds(INTERVAL));
+
+        while (await timer.WaitForNextTickAsync())
+        {
+            
+        }
     }
 }
 

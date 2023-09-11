@@ -11,7 +11,7 @@ internal class Program
     static async Task Main(string[] args)
     {
 #if DEBUG
-        Functions.DryRun = true;
+        //Functions.DryRun = true;
 
         if (File.Exists(".env"))
         {

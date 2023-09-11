@@ -136,7 +136,7 @@ public class API
         if (record.PercentDownloaded > Stalled_RemovePercentThreshold) { return; }       
 
         Console.WriteLine($"Removing stalled download from '{URL}': ID '{record.ID}' Title '{record.Title ?? "<unknown>"}' Downloaded '{record.PercentDownloaded}%' Threshold '{Stalled_RemovePercentThreshold}%'");
-        await Functions.MakeRequest($"{URL}{API_SUFFIX}/queue/{record.ID}?removeFromClient={Stalled_RemoveFromClient}&blocklist={Stalled_BlocklistRelease}", Key, HttpMethod.Delete, http);
+        await Functions.MakeRequest($"{URL}{API_SUFFIX}/queue?id={record.ID}&removeFromClient={Stalled_RemoveFromClient}&blocklist={Stalled_BlocklistRelease}", Key, HttpMethod.Delete, http);
     }
 }
 

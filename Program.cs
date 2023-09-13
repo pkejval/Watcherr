@@ -1,6 +1,5 @@
-﻿using System.Text.Json;
-using Watcherr;
-using Watcherr.Classes.API;
+﻿using Watcherr.Classes.API;
+using static Watcherr.Functions;
 
 internal class Program
 {
@@ -23,7 +22,7 @@ internal class Program
         }
         catch (Exception ex)
         {
-            await Console.Error.WriteLineAsync($"Failed to load/parse .env file!\n{ex.Message}");
+            LogError($"Failed to load/parse .env file!\n{ex.Message}");
         }
         
         var APIs_definition = Environment.GetEnvironmentVariable("APIS") ?? "";
@@ -33,11 +32,9 @@ internal class Program
             APIs.Add(new API(a.ToUpper()));
         }
 
-        await GetInitialInfo();
-
         if (!APIs.Any())
         {
-            Console.Error.WriteLine("No APIs defined in environment variable APIS. Exiting!");
+            LogError("No APIs are defined in environment variable APIS. Exiting!");
             Environment.Exit(2);
         }
 
@@ -57,16 +54,13 @@ internal class Program
         }
     }
 
-    static async Task GetInitialInfo()
-    {
-        foreach (var api in APIs)
-        {
-            await api.GetInitialInfo();
-        }
-    }
-
     static async Task DoWork()
     {
+        foreach (var failed in APIs.Where(x => !x.IsOK))
+        {
+            await failed.GetInitialInfo();
+        }
+
         foreach (var api in APIs.Where(x => x.IsOK))
         {
             await api.DeleteUnmonitored();

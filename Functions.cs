@@ -27,23 +27,21 @@ public static class Functions
 
         try
         {
-            var obj = JsonConvert.DeserializeObject<T>(await response.Content.ReadAsStringAsync(), new JsonSerializerSettings() { Error = (s, a) => { Console.Error.WriteLine(a.ErrorContext.Error.Message); }});
+            var obj = JsonConvert.DeserializeObject<T>(await response.Content.ReadAsStringAsync(), new JsonSerializerSettings() { Error = (s, a) => { LogError(url, a.ErrorContext.Error.Message); }});
             return obj;
         }
         catch (Exception ex)
         {
-            await Console.Error.WriteLineAsync(ex.Message);
+            LogError(ex.Message);
             return default;
         }   
     }
 
     public static async Task<HttpResponseMessage?> MakeRequest(string url, string key, HttpMethod method, object? data = null, bool form_content = false)
     {
-        Console.WriteLine(url);
-
         if (Functions.DryRun && (method == HttpMethod.Post || method == HttpMethod.Delete || method == HttpMethod.Patch || method == HttpMethod.Put))
         {
-            Console.WriteLine($"Not sending '{method.Method}' to '{url}' because DRYRUN is ON!");
+            Log($"Not sending '{method.Method}' to '{url}' because DRYRUN is ON!");
             return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
         }
 
@@ -75,8 +73,18 @@ public static class Functions
         }
         catch (Exception ex)
         {
-            await Console.Error.WriteLineAsync(ex.Message);
+            LogError(ex.Message);
             return null;
         }
     }
+
+    public static void Log(string text, string? api_url = null, bool error = false)
+    {
+        var msg = $"[{DateTimeOffset.Now.ToLocalTime()}]{(!string.IsNullOrEmpty(api_url) ? $" [{api_url}] " : "")}[{(error ? "ERR": "INF")}] - {text}";
+        
+        if (error) Console.Error.WriteLine(msg);
+        else Console.WriteLine(msg);
+    }
+
+    public static void LogError(string text, string? api_url = null) => Log(text, api_url, error: true);
 }

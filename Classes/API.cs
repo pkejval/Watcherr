@@ -1,5 +1,4 @@
 using Newtonsoft.Json;
-using static Watcherr.Functions;
 
 namespace Watcherr.Classes.API;
 
@@ -52,7 +51,7 @@ public class API
         var env = Environment.GetEnvironmentVariable($"{Name.ToUpper()}_{envname.ToUpper()}") ?? "";
         if (string.IsNullOrEmpty(env)) 
         { 
-            Console.Error.WriteLine($"Environment variable {Name.ToUpper()}_{envname.ToUpper()} not set!{(!string.IsNullOrEmpty(default_value) ? $" Setting default value '{default_value}.'": "")}"); 
+            LogError($"Environment variable {Name.ToUpper()}_{envname.ToUpper()} not set!{(!string.IsNullOrEmpty(default_value) ? $" Setting default value '{default_value}.'": "")}"); 
             
             if (!string.IsNullOrEmpty(default_value)) { return default_value; }
             IsOK = !required; 
@@ -72,12 +71,12 @@ public class API
 
     public async Task GetInitialInfo()
     {
-        Console.WriteLine($"Getting initial info for '{URL}'");
+        Log($"Getting initial info about instance");
         SystemStatus = await Functions.GetApiObject<SystemStatus>($"{URL}{API_SUFFIX}/system/status", Key, HttpMethod.Get);
 
         if (SystemStatus is null || string.IsNullOrEmpty(SystemStatus?.Version)) 
         { 
-            await Console.Error.WriteLineAsync($"Some problem contanting '{URL}'. Marking it as failed until Watcherr restart!");
+            LogError($"Some problem with connecting to instance. Marking it as failed until next interval!");
             IsOK = false; 
             return;
         }
@@ -86,13 +85,13 @@ public class API
             AppType = type;
         }
 
-        Console.WriteLine($"Found '{SystemStatus.AppName}' version '{SystemStatus.Version}' at '{URL}'");
+        Log($"Found '{SystemStatus.AppName}' version '{SystemStatus.Version}'.");
     }
 
     public async Task DeleteUnmonitored()
     {
         if (!Unmonitored_RemoveFromLibrary) { return; }
-        Console.WriteLine($"Searching for unmonitored shows at '{URL}'");
+        Log($"Searching for unmonitored shows...");
 
         var api_app = AppType switch
         {
@@ -103,10 +102,11 @@ public class API
 
         var info = await Functions.GetApiObject<List<MovieSeriesObject>>($"{URL}{API_SUFFIX}/{api_app}", Key, HttpMethod.Get);
         if (info is null) { return; }
-
+        
+        Log($"Found {info.Count(x => !x.Monitored)} unmonitored shows");
         foreach (var unmonitored in info.Where(x => !x.Monitored))
         {
-            Console.WriteLine($"Removing unmonitored show from '{URL}': ID {unmonitored.ID} Title '{unmonitored.Title}'");
+            Log($"Removing unmonitored show: ID '{unmonitored.ID}' Title '{unmonitored.Title}'");
             await Functions.MakeRequest($"{URL}{API_SUFFIX}/{api_app}/{unmonitored.ID}?deleteFiles={Unmonitored_DeleteFiles}", Key, HttpMethod.Delete);
         }
     }
@@ -134,8 +134,9 @@ public class API
 
     public async Task GetQueue()
     {
-        Console.WriteLine($"Getting Queue for '{URL}'");
+        Log($"Getting Queue");
         Queue = await Functions.GetApiObject<Queue>($"{URL}{API_SUFFIX}/queue", Key, HttpMethod.Get);
+        Log($"Found {Queue?.Records.Count ?? 0} records in queue");
     }
 
     public async Task DeleteFromQueueBulk(IEnumerable<int> Ids)
@@ -148,9 +149,12 @@ public class API
     {
         if (record.PercentDownloaded > Stalled_RemovePercentThreshold) { return; }       
 
-        Console.WriteLine($"Removing stalled download from '{URL}': ID '{record.ID}' Title '{record.Title ?? "<unknown>"}' Downloaded '{record.PercentDownloaded}%' Threshold '{Stalled_RemovePercentThreshold}%'");
+        Log($"Removing stalled download ID '{record.ID}' Title '{record.Title ?? "<unknown>"}' Downloaded '{record.PercentDownloaded}%' Threshold '{Stalled_RemovePercentThreshold}%'");
         await Functions.MakeRequest($"{URL}{API_SUFFIX}/queue/{record.ID}?removeFromClient={Stalled_RemoveFromClient}&blocklist={Stalled_BlocklistRelease}", Key, HttpMethod.Delete);
     }
+
+    private void Log(string text) => Functions.Log(text, URL);
+    private void LogError(string text) => Functions.Log(text, URL);
 }
 
 public class SystemStatus

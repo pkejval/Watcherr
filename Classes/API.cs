@@ -144,7 +144,7 @@ public class API
         await Functions.MakeRequest($"{URL}{API_SUFFIX}/queue/bulk?removeFromClient={Stalled_RemoveFromClient}&blocklist={Stalled_BlocklistRelease}", Key, HttpMethod.Delete, data);
     }
 
-    public async Task DeleteFromQueue(Record record, HttpClient http)
+    public async Task DeleteFromQueue(Record record)
     {
         if (record.PercentDownloaded > Stalled_RemovePercentThreshold) { return; }       
 
@@ -185,7 +185,7 @@ public class Record
     public long Size { get; set; }
     public long SizeLeft { get; set; }
 
-    public decimal PercentDownloaded => Size > 0 ? ((Size - SizeLeft) / Size) * 100 : 0;
+    public decimal PercentDownloaded => Convert.ToDecimal(Size > 0 ? ((Size - SizeLeft) / Size) * 100 : 0);
 
     [JsonProperty("status")]
     public string? Status { get; set; }

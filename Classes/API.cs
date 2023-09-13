@@ -122,14 +122,14 @@ public class API
         (x!.Status?.Equals("warning", StringComparison.OrdinalIgnoreCase) ?? false) && (x!.ErrorMessage?.Contains("stalled", StringComparison.OrdinalIgnoreCase) ?? false)
             || ((x!.Status?.Equals("queued", StringComparison.OrdinalIgnoreCase) ?? false) && x!.Size == 0)))
         {
-            await DeleteFromQueue(stalled, Http);
+            await DeleteFromQueue(stalled);
         }
 
         // var stalled = Queue.Records.Where(x => x is not null &&
         //     (x!.Status?.Equals("warning", StringComparison.OrdinalIgnoreCase) ?? false) && (x!.ErrorMessage?.Contains("stalled", StringComparison.OrdinalIgnoreCase) ?? false)
         //      || ((x!.Status?.Equals("queued", StringComparison.OrdinalIgnoreCase) ?? false) && x!.Size == 0)).Select(x => x.ID);
 
-        // await DeleteFromQueueBulk(stalled, Http);
+        // await DeleteFromQueueBulk(stalled);
     }
 
     public async Task GetQueue()

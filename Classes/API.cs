@@ -42,7 +42,7 @@ public class API
         int.TryParse(GetEnvironmentVariable("STALLED_REMOVE_PERCENT_THRESHOLD", default_value: "2"), out Stalled_RemovePercentThreshold);
         bool.TryParse(GetEnvironmentVariable("STALLED_REMOVE", default_value: "false"), out Stalled_Remove);
         bool.TryParse(GetEnvironmentVariable("STALLED_REMOVE_FROM_CLIENT", default_value: "true"), out Stalled_RemoveFromClient);
-        bool.TryParse(GetEnvironmentVariable("STALLED_BLACKLIST_RELEASE", default_value: "false"), out Stalled_BlocklistRelease);
+        bool.TryParse(GetEnvironmentVariable("STALLED_BLOCKLIST_RELEASE", default_value: "false"), out Stalled_BlocklistRelease);
         bool.TryParse(GetEnvironmentVariable("UNMONITORED_REMOVE", default_value: "false"), out Unmonitored_RemoveFromLibrary);
         bool.TryParse(GetEnvironmentVariable("UNMONITORED_DELETE_FILES", default_value: "false"), out Unmonitored_DeleteFiles);
     }

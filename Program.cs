@@ -9,19 +9,23 @@ internal class Program
 
     static async Task Main(string[] args)
     {
-#if DEBUG
-        //Functions.DryRun = true;
-
-        if (File.Exists(".env"))
-        {
-            foreach (var line in await File.ReadAllLinesAsync(".env"))
+        try
+        {  
+            if (File.Exists(".env"))
             {
-                var split_line = line.Split('=', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                if (split_line.Length != 2) { continue; }
-                Environment.SetEnvironmentVariable(split_line[0].ToUpper(), split_line[1]);
+                foreach (var line in await File.ReadAllLinesAsync(".env"))
+                {
+                    var split_line = line.Split('=', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    if (split_line.Length != 2) { continue; }
+                    Environment.SetEnvironmentVariable(split_line[0].ToUpper(), split_line[1]);
+                }
             }
         }
-#endif
+        catch (Exception ex)
+        {
+            await Console.Error.WriteLineAsync($"Failed to load/parse .env file!\n{ex.Message}");
+        }
+        
         var APIs_definition = Environment.GetEnvironmentVariable("APIS") ?? "";
 
         foreach (var a in APIs_definition.Split(new char[] {' ', ',', ';'}, StringSplitOptions.RemoveEmptyEntries))

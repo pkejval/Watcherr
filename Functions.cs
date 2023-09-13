@@ -1,9 +1,13 @@
+using System.Text;
 using Newtonsoft.Json;
 
 namespace Watcherr;
 
 public static class Functions
 {
+    public static HttpClientHandler Handler { get; private set; } = new();
+    public static HttpClient Http { get; private set; } = new(Handler);
+
     public static bool DryRun;
 
     public static T GetEnvironment<T>(string variable_name, T default_value)
@@ -16,9 +20,9 @@ public static class Functions
         return default_value;
     }
 
-    public static async Task<T?> GetApiObject<T>(string url, string key, HttpMethod method, HttpClient http)
+    public static async Task<T?> GetApiObject<T>(string url, string key, HttpMethod method)
     {
-        var response = await MakeRequest(url, key, method, http);
+        var response = await MakeRequest(url, key, method, Http);
         if (response is null) { return default; }
 
         try
@@ -33,8 +37,10 @@ public static class Functions
         }   
     }
 
-    public static async Task<HttpResponseMessage?> MakeRequest(string url, string key, HttpMethod method, HttpClient http)
+    public static async Task<HttpResponseMessage?> MakeRequest(string url, string key, HttpMethod method, object? data = null, bool form_content = false)
     {
+        Console.WriteLine(url);
+
         if (Functions.DryRun && (method == HttpMethod.Post || method == HttpMethod.Delete || method == HttpMethod.Patch || method == HttpMethod.Put))
         {
             Console.WriteLine($"Not sending '{method.Method}' to '{url}' because DRYRUN is ON!");
@@ -44,11 +50,27 @@ public static class Functions
         try
         {
             var request = new HttpRequestMessage(method, url);
+            request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
             request.Headers.Add("X-Api-Key", key);
             
-            var response = await http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            Http.DefaultRequestHeaders.Add("X-Api-Key", key);
+            
+            if (data is not null)
+            {
+                var json = JsonConvert.SerializeObject(data);
 
+                if (form_content)
+                {
+                    var kvp = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                    request.Content = new FormUrlEncodedContent(kvp!);
+                }
+                else
+                {
+                    request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+                }
+            }
+
+            var response = await Http.SendAsync(request);
             return response;
         }
         catch (Exception ex)

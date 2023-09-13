@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using static Watcherr.Functions;
 
 namespace Watcherr.Classes.API;
 
@@ -69,14 +70,14 @@ public class API
         return env;
     }
 
-    public async Task GetInitialInfo(HttpClient http)
+    public async Task GetInitialInfo()
     {
         Console.WriteLine($"Getting initial info for '{URL}'");
-        SystemStatus = await Functions.GetApiObject<SystemStatus>($"{URL}{API_SUFFIX}/system/status", Key, HttpMethod.Get, http);
+        SystemStatus = await Functions.GetApiObject<SystemStatus>($"{URL}{API_SUFFIX}/system/status", Key, HttpMethod.Get);
 
         if (SystemStatus is null || string.IsNullOrEmpty(SystemStatus?.Version)) 
         { 
-            await Console.Error.WriteLineAsync("Some problem contanting '{URL}'. Marking it as failed until Watcherr restart!");
+            await Console.Error.WriteLineAsync($"Some problem contanting '{URL}'. Marking it as failed until Watcherr restart!");
             IsOK = false; 
             return;
         }
@@ -88,7 +89,7 @@ public class API
         Console.WriteLine($"Found '{SystemStatus.AppName}' version '{SystemStatus.Version}' at '{URL}'");
     }
 
-    public async Task DeleteUnmonitored(HttpClient http)
+    public async Task DeleteUnmonitored()
     {
         if (!Unmonitored_RemoveFromLibrary) { return; }
         Console.WriteLine($"Searching for unmonitored shows at '{URL}'");
@@ -100,35 +101,47 @@ public class API
             _ => ""
         };
 
-        var info = await Functions.GetApiObject<List<MovieSeriesObject>>($"{URL}{API_SUFFIX}/{api_app}", Key, HttpMethod.Get, http);
+        var info = await Functions.GetApiObject<List<MovieSeriesObject>>($"{URL}{API_SUFFIX}/{api_app}", Key, HttpMethod.Get);
         if (info is null) { return; }
 
         foreach (var unmonitored in info.Where(x => !x.Monitored))
         {
             Console.WriteLine($"Removing unmonitored show from '{URL}': ID {unmonitored.ID} Title '{unmonitored.Title}'");
-            await Functions.MakeRequest($"{URL}{API_SUFFIX}/{api_app}/{unmonitored.ID}?deleteFiles={Unmonitored_DeleteFiles}", Key, HttpMethod.Delete, http);
+            await Functions.MakeRequest($"{URL}{API_SUFFIX}/{api_app}/{unmonitored.ID}?deleteFiles={Unmonitored_DeleteFiles}", Key, HttpMethod.Delete);
         }
     }
 
-    public async Task DeleteStalled(HttpClient http)
+    public async Task DeleteStalled()
     {
         if (!Stalled_Remove) { return; }
 
-        await GetQueue(http);
+        await GetQueue();
         if (Queue is null || !Queue.Records.Any()) { return; }
 
         foreach (var stalled in Queue.Records.Where(x => x is not null &&
         (x!.Status?.Equals("warning", StringComparison.OrdinalIgnoreCase) ?? false) && (x!.ErrorMessage?.Contains("stalled", StringComparison.OrdinalIgnoreCase) ?? false)
             || ((x!.Status?.Equals("queued", StringComparison.OrdinalIgnoreCase) ?? false) && x!.Size == 0)))
         {
-            await DeleteFromQueue(stalled, http);
+            await DeleteFromQueue(stalled, Http);
         }
+
+        // var stalled = Queue.Records.Where(x => x is not null &&
+        //     (x!.Status?.Equals("warning", StringComparison.OrdinalIgnoreCase) ?? false) && (x!.ErrorMessage?.Contains("stalled", StringComparison.OrdinalIgnoreCase) ?? false)
+        //      || ((x!.Status?.Equals("queued", StringComparison.OrdinalIgnoreCase) ?? false) && x!.Size == 0)).Select(x => x.ID);
+
+        // await DeleteFromQueueBulk(stalled, Http);
     }
 
-    public async Task GetQueue(HttpClient http)
+    public async Task GetQueue()
     {
         Console.WriteLine($"Getting Queue for '{URL}'");
-        Queue = await Functions.GetApiObject<Queue>($"{URL}{API_SUFFIX}/queue", Key, HttpMethod.Get, http);
+        Queue = await Functions.GetApiObject<Queue>($"{URL}{API_SUFFIX}/queue", Key, HttpMethod.Get);
+    }
+
+    public async Task DeleteFromQueueBulk(IEnumerable<int> Ids)
+    {
+        var data = new { Ids };
+        await Functions.MakeRequest($"{URL}{API_SUFFIX}/queue/bulk?removeFromClient={Stalled_RemoveFromClient}&blocklist={Stalled_BlocklistRelease}", Key, HttpMethod.Delete, data);
     }
 
     public async Task DeleteFromQueue(Record record, HttpClient http)
@@ -136,7 +149,7 @@ public class API
         if (record.PercentDownloaded > Stalled_RemovePercentThreshold) { return; }       
 
         Console.WriteLine($"Removing stalled download from '{URL}': ID '{record.ID}' Title '{record.Title ?? "<unknown>"}' Downloaded '{record.PercentDownloaded}%' Threshold '{Stalled_RemovePercentThreshold}%'");
-        await Functions.MakeRequest($"{URL}{API_SUFFIX}/queue?id={record.ID}&removeFromClient={Stalled_RemoveFromClient}&blocklist={Stalled_BlocklistRelease}", Key, HttpMethod.Delete, http);
+        await Functions.MakeRequest($"{URL}{API_SUFFIX}/queue/{record.ID}?removeFromClient={Stalled_RemoveFromClient}&blocklist={Stalled_BlocklistRelease}", Key, HttpMethod.Delete);
     }
 }
 

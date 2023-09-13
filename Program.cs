@@ -5,7 +5,6 @@ using Watcherr.Classes.API;
 internal class Program
 {
     public static int INTERVAL { get; private set; }
-    public static HttpClient Http { get; private set; } = new HttpClient();
     public static List<API> APIs = new();
 
     static async Task Main(string[] args)
@@ -58,7 +57,7 @@ internal class Program
     {
         foreach (var api in APIs)
         {
-            await api.GetInitialInfo(Http);
+            await api.GetInitialInfo();
         }
     }
 
@@ -66,8 +65,8 @@ internal class Program
     {
         foreach (var api in APIs.Where(x => x.IsOK))
         {
-            await api.DeleteUnmonitored(Http);
-            await api.DeleteStalled(Http);
+            await api.DeleteUnmonitored();
+            await api.DeleteStalled();
         }
     }
 }

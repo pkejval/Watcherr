@@ -50,9 +50,7 @@ public static class Functions
             var request = new HttpRequestMessage(method, url);
             request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
             request.Headers.Add("X-Api-Key", key);
-            
-            Http.DefaultRequestHeaders.Add("X-Api-Key", key);
-            
+                        
             if (data is not null)
             {
                 var json = JsonConvert.SerializeObject(data);

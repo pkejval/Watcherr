@@ -189,7 +189,7 @@ public class Record
     public long Size { get; set; }
     public long SizeLeft { get; set; }
 
-    public decimal PercentDownloaded => Convert.ToDecimal(Size > 0 ? ((Size - SizeLeft) / Size) * 100 : 0);
+    public double PercentDownloaded => Size > 0 ? (((double)Size - (double)SizeLeft) / (double)Size) * 100 : 0;
 
     [JsonProperty("status")]
     public string? Status { get; set; }

@@ -15,7 +15,7 @@ public class API
     public bool Unmonitored_RemoveFromLibrary;
     public bool Unmonitored_DeleteFiles;
 
-    public bool IsOK { get; private set; } = true;
+    public bool IsOK { get; private set; }
 
     public Queue? Queue { get; private set; }
     public SystemStatus? SystemStatus { get; private set; }
@@ -80,11 +80,13 @@ public class API
             IsOK = false; 
             return;
         }
+
         if (Enum.TryParse(SystemStatus!.AppName, true, out AppTypes type))
         {
             AppType = type;
         }
 
+        IsOK = true;
         Log($"Found '{SystemStatus.AppName}' version '{SystemStatus.Version}'.");
     }
 

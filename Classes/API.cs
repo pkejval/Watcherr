@@ -153,8 +153,24 @@ public class API
 
         Log($"Removing stalled download ID '{record.ID}' Title '{record.Title ?? "<unknown>"}' Downloaded '{record.PercentDownloaded}%' Threshold '{Stalled_RemovePercentThreshold}%'");
         await Functions.MakeRequest($"{URL}{API_SUFFIX}/queue/{record.ID}?removeFromClient={Stalled_RemoveFromClient}&blocklist={Stalled_BlocklistRelease}", Key, HttpMethod.Delete);
+        await SearchMonitored(record);
     }
 
+    private async Task SearchMonitored(Record record)
+    {
+        Log($"Searching for monitored show ID '{record.ID}' Title '{record.Title ?? "<unknown>"}'");
+        await SearchMonitored(record.ID, false);
+    }
+
+    private async Task SearchMonitored(int id, bool log = true)
+    {
+        if (log)
+            Log($"Searching for monitored show '{id}'");
+
+        await Functions.MakeRequest($"{URL}{API_SUFFIX}/command", Key, HttpMethod.Post,
+            new { name = "SeriesSearch", seriesID = id });
+    }
+    
     private void Log(string text) => Functions.Log(text, URL);
     private void LogError(string text) => Functions.Log(text, URL);
 }

@@ -5,19 +5,17 @@ namespace Watcherr;
 
 public static class Functions
 {
-    public static HttpClientHandler Handler { get; private set; } = new();
-    public static HttpClient Http { get; private set; } = new(Handler);
-
-    public static bool DryRun;
-
-    public static T GetEnvironment<T>(string variable_name, T default_value)
+    private static HttpClientHandler Handler { get; } = new();
+    private static HttpClient Http { get; } = new(Handler);
+    
+    public static T GetEnvironment<T>(string variableName, T defaultValue)
     {
-        var env = Environment.GetEnvironmentVariable(variable_name);
-        if (string.IsNullOrEmpty(env)) { return default_value; }
+        var env = Environment.GetEnvironmentVariable(variableName);
+        if (string.IsNullOrEmpty(env)) { return defaultValue; }
 
         if (typeof(T) == typeof(int)) { return (T)(object)Convert.ToInt32(env); }
 
-        return default_value;
+        return defaultValue;
     }
 
     public static async Task<T?> GetApiObject<T>(string url, string key, HttpMethod method)
@@ -27,7 +25,7 @@ public static class Functions
 
         try
         {
-            var obj = JsonConvert.DeserializeObject<T>(await response.Content.ReadAsStringAsync(), new JsonSerializerSettings() { Error = (s, a) => { LogError(url, a.ErrorContext.Error.Message); }});
+            var obj = JsonConvert.DeserializeObject<T>(await response.Content.ReadAsStringAsync(), new JsonSerializerSettings { Error = (_, a) => { LogError(url, a.ErrorContext.Error.Message); }});
             return obj;
         }
         catch (Exception ex)
@@ -37,14 +35,8 @@ public static class Functions
         }   
     }
 
-    public static async Task<HttpResponseMessage?> MakeRequest(string url, string key, HttpMethod method, object? data = null, bool form_content = false)
+    public static async Task<HttpResponseMessage?> MakeRequest(string url, string key, HttpMethod method, object? data = null, bool formContent = false)
     {
-        if (Functions.DryRun && (method == HttpMethod.Post || method == HttpMethod.Delete || method == HttpMethod.Patch || method == HttpMethod.Put))
-        {
-            Log($"Not sending '{method.Method}' to '{url}' because DRYRUN is ON!");
-            return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
-        }
-
         try
         {
             var request = new HttpRequestMessage(method, url);
@@ -55,7 +47,7 @@ public static class Functions
             {
                 var json = JsonConvert.SerializeObject(data);
 
-                if (form_content)
+                if (formContent)
                 {
                     var kvp = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
                     request.Content = new FormUrlEncodedContent(kvp!);
@@ -76,13 +68,14 @@ public static class Functions
         }
     }
 
-    public static void Log(string text, string? api_url = null, bool error = false)
+    public static void Log(string text, string? apiUrl = null, bool error = false)
     {
-        var msg = $"[{DateTimeOffset.Now.ToLocalTime()}]{(!string.IsNullOrEmpty(api_url) ? $" [{api_url}] " : "")}[{(error ? "ERR": "INF")}] - {text}";
+        var msg = $"[{DateTimeOffset.Now.ToLocalTime()}]{(!string.IsNullOrEmpty(apiUrl) ? $" [{apiUrl}] " : "")}[{(error ? "ERR": "INF")}] - {text}";
         
         if (error) Console.Error.WriteLine(msg);
         else Console.WriteLine(msg);
     }
 
-    public static void LogError(string text, string? api_url = null) => Log(text, api_url, error: true);
+    public static void LogError(string text, string? apiUrl = null) 
+        => Log(text, apiUrl, error: true);
 }

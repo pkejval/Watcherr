@@ -35,29 +35,29 @@ public class API
     {
         Name = name;
 
-        URL = GetEnvironmentVariable("URL", true);
-        Key = GetEnvironmentVariable("KEY", true);
+        URL = GetEnvironmentVariable("URL");
+        Key = GetEnvironmentVariable("KEY");
 
-        int.TryParse(GetEnvironmentVariable("STALLED_REMOVE_PERCENT_THRESHOLD", default_value: "2"), out Stalled_RemovePercentThreshold);
-        bool.TryParse(GetEnvironmentVariable("STALLED_REMOVE", default_value: "false"), out Stalled_Remove);
-        bool.TryParse(GetEnvironmentVariable("STALLED_REMOVE_FROM_CLIENT", default_value: "true"), out Stalled_RemoveFromClient);
-        bool.TryParse(GetEnvironmentVariable("STALLED_BLOCKLIST_RELEASE", default_value: "false"), out Stalled_BlocklistRelease);
-        bool.TryParse(GetEnvironmentVariable("UNMONITORED_REMOVE", default_value: "false"), out Unmonitored_RemoveFromLibrary);
-        bool.TryParse(GetEnvironmentVariable("UNMONITORED_DELETE_FILES", default_value: "false"), out Unmonitored_DeleteFiles);
+        int.TryParse(GetEnvironmentVariable("STALLED_REMOVE_PERCENT_THRESHOLD", defaultValue: "2"), out Stalled_RemovePercentThreshold);
+        bool.TryParse(GetEnvironmentVariable("STALLED_REMOVE", defaultValue: "false"), out Stalled_Remove);
+        bool.TryParse(GetEnvironmentVariable("STALLED_REMOVE_FROM_CLIENT", defaultValue: "true"), out Stalled_RemoveFromClient);
+        bool.TryParse(GetEnvironmentVariable("STALLED_BLOCKLIST_RELEASE", defaultValue: "false"), out Stalled_BlocklistRelease);
+        bool.TryParse(GetEnvironmentVariable("UNMONITORED_REMOVE", defaultValue: "false"), out Unmonitored_RemoveFromLibrary);
+        bool.TryParse(GetEnvironmentVariable("UNMONITORED_DELETE_FILES", defaultValue: "false"), out Unmonitored_DeleteFiles);
     }
 
-    private string GetEnvironmentVariable(string envname, bool required = true, string default_value = "")
+    private string GetEnvironmentVariable(string envname, bool required = true, string defaultValue = "")
     {
         var env = Environment.GetEnvironmentVariable($"{Name.ToUpper()}_{envname.ToUpper()}") ?? "";
         if (string.IsNullOrEmpty(env)) 
         { 
-            LogError($"Environment variable {Name.ToUpper()}_{envname.ToUpper()} not set!{(!string.IsNullOrEmpty(default_value) ? $" Setting default value '{default_value}.'": "")}"); 
+            LogError($"Environment variable {Name.ToUpper()}_{envname.ToUpper()} not set!{(!string.IsNullOrEmpty(defaultValue) ? $" Setting default value '{defaultValue}.'": "")}"); 
             
-            if (!string.IsNullOrEmpty(default_value)) { return default_value; }
+            if (!string.IsNullOrEmpty(defaultValue)) { return defaultValue; }
             IsOK = !required; 
         }
 
-        if (int.TryParse(env, out int i))
+        if (int.TryParse(env, out var i))
         {
             env = i switch
             {
@@ -71,12 +71,12 @@ public class API
 
     public async Task GetInitialInfo()
     {
-        Log($"Getting initial info about instance");
+        Log("Getting initial info about instance");
         SystemStatus = await Functions.GetApiObject<SystemStatus>($"{URL}{API_SUFFIX}/system/status", Key, HttpMethod.Get);
 
         if (SystemStatus is null || string.IsNullOrEmpty(SystemStatus?.Version)) 
         { 
-            LogError($"Some problem with connecting to instance. Marking it as failed until next interval!");
+            LogError("Some problem with connecting to instance. Marking it as failed until next interval!");
             IsOK = false; 
             return;
         }
@@ -93,23 +93,23 @@ public class API
     public async Task DeleteUnmonitored()
     {
         if (!Unmonitored_RemoveFromLibrary) { return; }
-        Log($"Searching for unmonitored shows...");
+        Log("Searching for unmonitored shows...");
 
-        var api_app = AppType switch
+        var apiApp = AppType switch
         {
             AppTypes.Radarr => "movie",
             AppTypes.Sonarr => "series",
             _ => ""
         };
 
-        var info = await Functions.GetApiObject<List<MovieSeriesObject>>($"{URL}{API_SUFFIX}/{api_app}", Key, HttpMethod.Get);
+        var info = await Functions.GetApiObject<List<MovieSeriesObject>>($"{URL}{API_SUFFIX}/{apiApp}", Key, HttpMethod.Get);
         if (info is null) { return; }
         
         Log($"Found {info.Count(x => !x.Monitored)} unmonitored shows");
         foreach (var unmonitored in info.Where(x => !x.Monitored))
         {
             Log($"Removing unmonitored show: ID '{unmonitored.ID}' Title '{unmonitored.Title}'");
-            await Functions.MakeRequest($"{URL}{API_SUFFIX}/{api_app}/{unmonitored.ID}?deleteFiles={Unmonitored_DeleteFiles}", Key, HttpMethod.Delete);
+            await Functions.MakeRequest($"{URL}{API_SUFFIX}/{apiApp}/{unmonitored.ID}?deleteFiles={Unmonitored_DeleteFiles}", Key, HttpMethod.Delete);
         }
     }
 
@@ -134,20 +134,20 @@ public class API
         // await DeleteFromQueueBulk(stalled);
     }
 
-    public async Task GetQueue()
+    private async Task GetQueue()
     {
-        Log($"Getting Queue");
+        Log("Getting Queue");
         Queue = await Functions.GetApiObject<Queue>($"{URL}{API_SUFFIX}/queue", Key, HttpMethod.Get);
         Log($"Found {Queue?.Records.Count ?? 0} records in queue");
     }
 
-    public async Task DeleteFromQueueBulk(IEnumerable<int> Ids)
+    public async Task DeleteFromQueueBulk(IEnumerable<int> ids)
     {
-        var data = new { Ids };
+        var data = new { Ids = ids };
         await Functions.MakeRequest($"{URL}{API_SUFFIX}/queue/bulk?removeFromClient={Stalled_RemoveFromClient}&blocklist={Stalled_BlocklistRelease}", Key, HttpMethod.Delete, data);
     }
 
-    public async Task DeleteFromQueue(Record record)
+    private async Task DeleteFromQueue(Record record)
     {
         if (record.PercentDownloaded > Stalled_RemovePercentThreshold) { return; }       
 
@@ -191,7 +191,7 @@ public class Record
     public long Size { get; set; }
     public long SizeLeft { get; set; }
 
-    public double PercentDownloaded => Size > 0 ? (((double)Size - (double)SizeLeft) / (double)Size) * 100 : 0;
+    public double PercentDownloaded => Size > 0 ? ((Size - (double)SizeLeft) / Size) * 100.0 : 0.0;
 
     [JsonProperty("status")]
     public string? Status { get; set; }

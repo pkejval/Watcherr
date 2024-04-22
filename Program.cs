@@ -3,10 +3,10 @@ using static Watcherr.Functions;
 
 internal class Program
 {
-    public static int INTERVAL { get; private set; }
-    public static List<API> APIs = new();
+    private static int INTERVAL { get; set; }
+    private static readonly List<API> APIs = new();
 
-    static async Task Main(string[] args)
+    private static async Task Main(string[] args)
     {
         try
         {  
@@ -14,9 +14,9 @@ internal class Program
             {
                 foreach (var line in await File.ReadAllLinesAsync(".env"))
                 {
-                    var split_line = line.Split('=', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                    if (split_line.Length != 2) { continue; }
-                    Environment.SetEnvironmentVariable(split_line[0].ToUpper(), split_line[1]);
+                    var splitLine = line.Split('=', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    if (splitLine.Length != 2) { continue; }
+                    Environment.SetEnvironmentVariable(splitLine[0].ToUpper(), splitLine[1]);
                 }
             }
         }
@@ -27,7 +27,7 @@ internal class Program
         
         var APIs_definition = Environment.GetEnvironmentVariable("APIS") ?? "";
 
-        foreach (var a in APIs_definition.Split(new char[] {' ', ',', ';'}, StringSplitOptions.RemoveEmptyEntries))
+        foreach (var a in APIs_definition.Split(new[] {' ', ',', ';'}, StringSplitOptions.RemoveEmptyEntries))
         {
             APIs.Add(new API(a.ToUpper()));
         }
@@ -38,11 +38,9 @@ internal class Program
             Environment.Exit(2);
         }
 
-        if (int.TryParse(Environment.GetEnvironmentVariable("INTERVAL"), out int i))
-        {
-            INTERVAL = i;
-        }
-        else { INTERVAL = 600; }
+        INTERVAL = int.TryParse(Environment.GetEnvironmentVariable("INTERVAL"), out var i) 
+            ? i 
+            : 600;
 
         var timer = new PeriodicTimer(TimeSpan.FromSeconds(INTERVAL));
 
@@ -54,18 +52,21 @@ internal class Program
         }
     }
 
-    static async Task DoWork()
+    private static async Task DoWork()
     {
-        foreach (var failed in APIs.Where(x => !x.IsOK))
-        {
-            await failed.GetInitialInfo();
-        }
+        var tasks = APIs.Where(x => !x.IsOK)
+            .Select(failed => failed.GetInitialInfo())
+            .ToList();
+
+        await Task.WhenAll(tasks);
 
         foreach (var api in APIs.Where(x => x.IsOK))
         {
-            await api.DeleteUnmonitored();
-            await api.DeleteStalled();
+            tasks.Add(api.DeleteUnmonitored());
+            tasks.Add(api.DeleteStalled());
         }
+
+        await Task.WhenAll(tasks);
     }
 }
 
